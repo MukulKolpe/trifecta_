@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@hyperlane-xyz/core": "^6.0.1",
+    "@uniswap/permit2": "github:uniswap/permit2"
+  }
+}
