@@ -6,14 +6,16 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IT1GatewayCallback} from "./interfaces/IT1GatewayCallback.sol";
+import { BasicSwap7683 } from "intents-framework/BasicSwap7683.sol";
 
 /**
  * @title DutchAuction
  * @notice Implements a Dutch auction for cross-chain bridging requests
  * @dev This contract facilitates auctions for bridge requests from L1 to t1
  */
-contract DutchAuction is IT1GatewayCallback, Ownable, ReentrancyGuard {
+contract DutchAuction is IT1GatewayCallback,BasicSwap7683, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    uint32 public immutable localDomain;
 
     // ============ Structs ============
 
@@ -49,6 +51,7 @@ contract DutchAuction is IT1GatewayCallback, Ownable, ReentrancyGuard {
     mapping(uint256 => TimeInfo) public auctionTimes;
     mapping(uint256 => BidInfo) public auctionBids;
     mapping(uint256 => AuctionParties) public auctionParties;
+    mapping(bytes32 => uint256) public orderIdToAuctionId;
 
     // Counter for auction IDs
     uint256 public nextAuctionId;
@@ -97,7 +100,7 @@ contract DutchAuction is IT1GatewayCallback, Ownable, ReentrancyGuard {
 
     // ============ Constructor ============
 
-    constructor() Ownable(msg.sender) {}
+    constructor(address _permit2) Ownable(msg.sender)BasicSwap7683(_permit2) {}
 
     // ============ External Functions ============
 
@@ -149,26 +152,54 @@ contract DutchAuction is IT1GatewayCallback, Ownable, ReentrancyGuard {
      * @dev Only the winner can call this function
      * @param auctionId The ID of the auction to settle
      */
-    function settleAuction(uint256 auctionId) external nonReentrant {
-        require(_auctionExists(auctionId), "Auction does not exist");
+    // function settleAuction(uint256 auctionId,bytes32 _orderId, bytes calldata _originData, bytes calldata _fillerData) external nonReentrant {
+    //     require(_auctionExists(auctionId), "Auction does not exist");
 
+    //     TokenInfo storage tokens = auctionTokens[auctionId];
+    //     BidInfo storage bid = auctionBids[auctionId];
+
+    //     require(bid.winner == msg.sender, "Only the winner can settle");
+    //     require(!bid.settled, "Auction already settled");
+
+    //     // // Mark auction as settled
+    //     // bid.settled = true;
+
+    //     // // Transfer the source tokens to the winner
+    //     // IERC20(tokens.sourceToken).safeTransfer(
+    //     //     bid.winner,
+    //     //     tokens.sourceAmount
+    //     // );
+
+    //     emit AuctionSettled(auctionId, bid.winner, bid.winningBid);
+    // }
+
+    /**
+     * @notice Fills a single leg of a particular order on the destination chain
+     * @param _orderId Unique order identifier for this order
+     * @param _originData Data emitted on the origin to parameterize the fill
+     * @param _fillerData Data provided by the filler to inform the fill or express their preferences. It should
+     * contain the bytes32 encoded address of the receiver which is used at settlement time
+     */
+    function fill(bytes32 _orderId, bytes calldata _originData, bytes calldata _fillerData) external payable override {
+        uint256 auctionId = orderIdToAuctionId[_orderId];
+        require(_auctionExists(auctionId), "Auction does not exist");
         TokenInfo storage tokens = auctionTokens[auctionId];
         BidInfo storage bid = auctionBids[auctionId];
 
         require(bid.winner == msg.sender, "Only the winner can settle");
         require(!bid.settled, "Auction already settled");
+        if (orderStatus[_orderId] != UNKNOWN) revert InvalidOrderStatus();
 
+        // Fill intent order
+        _fillOrder(_orderId, _originData, _fillerData);
+
+        orderStatus[_orderId] = FILLED;
+        filledOrders[_orderId] = FilledOrder(_originData, _fillerData);
         // Mark auction as settled
         bid.settled = true;
 
-        // Transfer the source tokens to the winner
-        IERC20(tokens.sourceToken).safeTransfer(
-            bid.winner,
-            tokens.sourceAmount
-        );
-
-        emit AuctionSettled(auctionId, bid.winner, bid.winningBid);
-    }
+        emit Filled(_orderId, _originData, _fillerData);
+    }    
 
     /**
      * @notice Create an auction manually
@@ -488,6 +519,10 @@ contract DutchAuction is IT1GatewayCallback, Ownable, ReentrancyGuard {
             orderId: orderId
         });
 
+
+        // Store order ID mapping
+        orderIdToAuctionId[orderId] = auctionId;
+
         emit AuctionCreated(
             auctionId,
             user,
@@ -501,5 +536,37 @@ contract DutchAuction is IT1GatewayCallback, Ownable, ReentrancyGuard {
         );
 
         return auctionId;
+    }
+
+
+    /// @notice Dispatches a settlement message to the specified domain.
+    /// @dev Encodes the settle message using Hyperlane7683Message and dispatches it via the GasRouter.
+    /// @param _originDomain The domain to which the settlement message is sent.
+    /// @param _orderIds The IDs of the orders to settle.
+    /// @param _ordersFillerData The filler data for the orders.
+    function _dispatchSettle(
+        uint32 _originDomain,
+        bytes32[] memory _orderIds,
+        bytes[] memory _ordersFillerData
+    )
+        internal
+        override
+    {
+      
+    }
+
+    /// @notice Dispatches a refund message to the specified domain.
+    /// @dev Encodes the refund message using Hyperlane7683Message and dispatches it via the GasRouter.
+    /// @param _originDomain The domain to which the refund message is sent.
+    /// @param _orderIds The IDs of the orders to refund.
+    function _dispatchRefund(uint32 _originDomain, bytes32[] memory _orderIds) internal override {
+      
+    }
+
+    /// @notice Retrieves the local domain identifier.
+    /// @dev This function overrides the `_localDomain` function from the parent contract.
+    /// @return The local domain ID.
+    function _localDomain() internal view override returns (uint32) {
+        return localDomain;
     }
 }
