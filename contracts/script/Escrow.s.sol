@@ -11,7 +11,7 @@ contract OpenEscrow is Script {
      uint32 localDomain = 11155111;  // Example local domain ID
      address permit2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;  // Permit2 address
      Escrow public escrow = Escrow(
-       0x1466D61F3ACC8Ca23D80dD0Fa42A0e28e2c8a4C3
+       0x198f5C5D6305404D473B2C449a62595Aa7f68116
     );
     uint32 constant ORIGIN_CHAIN = 11155111;
     uint32 constant DESTINATION_CHAIN = 299792;
@@ -40,8 +40,8 @@ contract OpenEscrow is Script {
             recipient: TypeCasts.addressToBytes32(alice),
             inputToken: TypeCasts.addressToBytes32(address(inputToken)),
             outputToken: TypeCasts.addressToBytes32(address(outputToken)),
-            amountIn: 100,
-            amountOut: 100,
+            amountIn: 1e17,
+            amountOut: 1e17,
             senderNonce: uint32(
                 uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, msg.sender))) % 10_000
             ), // Random number between 0 and 9999
@@ -57,7 +57,7 @@ contract OpenEscrow is Script {
         OnchainCrossChainOrder memory order =
             _prepareOnchainOrder(encodedOrder, orderData.fillDeadline, OrderEncoder.orderDataType());
 
-        escrow.open(order);
+        escrow.open{value: 1e6}(order);
 
         bytes32 id = OrderEncoder.id(orderData);
         console2.logString("orderId: ");

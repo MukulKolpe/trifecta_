@@ -3,6 +3,7 @@ pragma solidity ^0.8.25;
 import { BasicSwap7683 } from "intents-framework/BasicSwap7683.sol";
 import {OnchainCrossChainOrder, ResolvedCrossChainOrder} from "intents-framework/ERC7683/IERC7683.sol";
 import "./interfaces/IL1ERC20Gateway.sol";
+import "./interfaces/IL1MessageQueue.sol";
 import { TypeCasts } from "@hyperlane-xyz/libs/TypeCasts.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -13,16 +14,18 @@ contract Escrow is BasicSwap7683,Ownable {
     // ============ Constants ============
     uint32 public immutable localDomain;
     IL1ERC20Gateway public immutable l1ERC20Gateway;
+    IL1MessageQueue public immutable l1MessageQueue;
     uint256 internal constant gasLimit = 1_000_000;
+    address public constant USDT_T1 = 0xb6E3F86a5CE9ac318F54C9C7Bcd6eff368DF0296;
   
-
     // ============ Storage variables ============
     mapping(uint256 => address) public chainToAuction;
     address public settlementContract;
 
     // ============ Constructor ============
-    constructor(address _l1ERC20Gateway,uint32 localDomain_,address _permit2) Ownable(msg.sender) BasicSwap7683(_permit2) {
+    constructor(address _l1ERC20Gateway,address _l1MessageQueue,uint32 localDomain_,address _permit2) Ownable(msg.sender) BasicSwap7683(_permit2) {
         l1ERC20Gateway = IL1ERC20Gateway(_l1ERC20Gateway);
+        l1MessageQueue = IL1MessageQueue(_l1MessageQueue);
         localDomain = localDomain_;
     }
 
@@ -45,24 +48,26 @@ contract Escrow is BasicSwap7683,Ownable {
                 bytes4 selector = getSelector("sendERC20(address,uint256,address)");
                 IERC20(token).approve(address(l1ERC20Gateway), resolvedOrder.minReceived[i].amount);
                 IERC20(token).transferFrom(msg.sender, address(this), resolvedOrder.minReceived[i].amount);
-                l1ERC20Gateway.depositERC20AndCall(
+                uint256 fees = l1MessageQueue.estimateCrossDomainMessageFee(gasLimit);
+                l1ERC20Gateway.depositERC20AndCall{value: fees}(
                     token,
-                    chainToAuction[resolvedOrder.minReceived[i].chainId],
+                    settlementContract,
                     resolvedOrder.minReceived[i].amount,
-                    abi.encodePacked(selector,resolvedOrder.minReceived[i].token,resolvedOrder.minReceived[i].amount, msg.sender),
+                    abi.encodePacked(selector,USDT_T1,resolvedOrder.minReceived[i].amount, msg.sender),
                     gasLimit    
                 );
             }
         }
 
-        if (msg.value != totalValue) revert InvalidNativeAmount();
+        // if (msg.value != totalValue) revert InvalidNativeAmount();
 
         emit Open(orderId, resolvedOrder);
     }
 
-
-    function addAuctionContract(uint256 chainId, address auctionContract) external onlyOwner {
-        chainToAuction[chainId] = auctionContract;
+    /// @notice Sets the settlement contract address.
+    /// @param _settlementContract The address of the settlement contract.
+    function setSettlementContract(address _settlementContract) external onlyOwner {
+        settlementContract = _settlementContract;
     }
     
     // ============ Internal Functions ============
