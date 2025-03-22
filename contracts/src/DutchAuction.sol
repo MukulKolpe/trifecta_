@@ -195,6 +195,8 @@ contract DutchAuction is IT1GatewayCallback,BasicSwap7683, Ownable, ReentrancyGu
 
         orderStatus[_orderId] = FILLED;
         filledOrders[_orderId] = FilledOrder(_originData, _fillerData);
+        // Mark auction as settled
+        bid.settled = true;
 
         emit Filled(_orderId, _originData, _fillerData);
     }    
