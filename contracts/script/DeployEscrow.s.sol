@@ -12,7 +12,7 @@ contract DeployEscrow is Script {
         address l1MessageQueue = 0xf8441821eF3982F1314DD242D668264Dc4783434;  // L1 Message Queue address
         uint32 localDomain = 11155111;  // Example local domain ID
         address permit2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;  // Permit2 address
-        address settler = 0x225aBc7297a686bD4092187B00DB81462666E1F2;  // Settler address
+        address settler = vm.envAddress("DUTCH_AUCTION_ADDR");  // Settler address
 
         // Deploy Escrow contract
         Escrow escrow = new Escrow(l1ERC20Gateway,l1MessageQueue, localDomain, permit2);

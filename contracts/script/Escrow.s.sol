@@ -11,7 +11,7 @@ contract OpenEscrow is Script {
      uint32 localDomain = 11155111;  // Example local domain ID
      address permit2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;  // Permit2 address
      Escrow public escrow = Escrow(
-       0x198f5C5D6305404D473B2C449a62595Aa7f68116
+       vm.envAddress("ESCROW_ADDR")
     );
     uint32 constant ORIGIN_CHAIN = 11155111;
     uint32 constant DESTINATION_CHAIN = 299792;
