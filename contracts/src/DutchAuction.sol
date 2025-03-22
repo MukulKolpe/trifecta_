@@ -100,7 +100,9 @@ contract DutchAuction is IT1GatewayCallback,BasicSwap7683, Ownable, ReentrancyGu
 
     // ============ Constructor ============
 
-    constructor(address _permit2) Ownable(msg.sender)BasicSwap7683(_permit2) {}
+    constructor(address _permit2,uint32 localDomain_) Ownable(msg.sender)BasicSwap7683(_permit2) {
+        localDomain = localDomain_;
+    }
 
     // ============ External Functions ============
 
