@@ -13,13 +13,12 @@ contract DeployEscrow is Script {
         uint32 localDomain = 11155111;  // Example local domain ID
         address permit2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;  // Permit2 address
         address settler = vm.envAddress("DUTCH_AUCTION_ADDR");  // Settler address
-
+        address messenger = 0xAFdF5cb097D6FB2EB8B1FFbAB180e667458e18F4; // Messenger address
+        address counterpart = address(0); // Dutch auction address initially to 0
         // Deploy Escrow contract
-        Escrow escrow = new Escrow(l1ERC20Gateway,l1MessageQueue, localDomain, permit2);
+        Escrow escrow = new Escrow(l1ERC20Gateway,l1MessageQueue, localDomain, permit2,messenger, counterpart);
 
         console.log("Escrow deployed at:", address(escrow));
-
-        escrow.setSettlementContract(settler);
 
         vm.stopBroadcast();
     }

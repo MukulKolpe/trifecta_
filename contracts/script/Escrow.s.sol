@@ -17,7 +17,7 @@ contract OpenEscrow is Script {
     uint32 constant DESTINATION_CHAIN = 299792;
     address constant USDT_SEPOLIA = 0x30E9b6B0d161cBd5Ff8cf904Ff4FA43Ce66AC346;
     address constant USDT_T1 = 0xb6E3F86a5CE9ac318F54C9C7Bcd6eff368DF0296;
-    address constant SETTLER = 0x225aBc7297a686bD4092187B00DB81462666E1F2;
+    address SETTLER = vm.envAddress("DUTCH_AUCTION_ADDR");
 
 
     function run() external {
@@ -57,7 +57,7 @@ contract OpenEscrow is Script {
         OnchainCrossChainOrder memory order =
             _prepareOnchainOrder(encodedOrder, orderData.fillDeadline, OrderEncoder.orderDataType());
 
-        escrow.open{value: 1e6}(order);
+        escrow.open{value:1e6}(order);
 
         bytes32 id = OrderEncoder.id(orderData);
         console2.logString("orderId: ");
