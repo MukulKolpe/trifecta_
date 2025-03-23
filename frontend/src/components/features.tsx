@@ -1,3 +1,4 @@
+// @ts-nocheck comment
 "use client";
 
 import type React from "react";

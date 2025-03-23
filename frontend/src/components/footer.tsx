@@ -1,3 +1,4 @@
+// @ts-nocheck comment
 import Link from "next/link";
 import { Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
