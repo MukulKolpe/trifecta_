@@ -6,16 +6,26 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IT1GatewayCallback} from "./interfaces/IT1GatewayCallback.sol";
-import { BasicSwap7683 } from "intents-framework/BasicSwap7683.sol";
+import { Base7683 } from "intents-framework/BasicSwap7683.sol";
+import {BasicSwap7683} from "./BasicSwap7683.sol";
+import { OrderData , OrderEncoder } from "intents-framework/libs/OrderEncoder.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { TypeCasts } from "@hyperlane-xyz/libs/TypeCasts.sol";
+import { IT1Messenger } from "./interfaces/IT1Messenger.sol";
+import { Hyperlane7683Message } from "intents-framework/libs/Hyperlane7683Message.sol";
+
 
 /**
  * @title DutchAuction
  * @notice Implements a Dutch auction for cross-chain bridging requests
  * @dev This contract facilitates auctions for bridge requests from L1 to t1
  */
-contract DutchAuction is IT1GatewayCallback,BasicSwap7683, Ownable, ReentrancyGuard {
+contract DutchAuction is IT1GatewayCallback,Base7683,BasicSwap7683,Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     uint32 public immutable localDomain;
+    IT1Messenger public immutable messenger;
+    address public counterpart;
+    uint32 internal constant DEFAULT_GAS_LIMIT = 1_000_000;
 
     // ============ Structs ============
 
@@ -97,15 +107,33 @@ contract DutchAuction is IT1GatewayCallback,BasicSwap7683, Ownable, ReentrancyGu
         address token,
         uint256 amount
     );
+    
+    // ============ Errors ============
+    
+    error OnlyMessenger();
+    error FunctionNotImplemented(string functionName);
+    error EthNotAllowed();
+
+    // ============ Modifiers ============
+
+    modifier onlyMessenger() {
+        if (_msgSender() != address(messenger)) revert OnlyMessenger();
+        _;
+    }
+
+
 
     // ============ Constructor ============
 
-    constructor(address _permit2,uint32 localDomain_) Ownable(msg.sender)BasicSwap7683(_permit2) {
+    constructor(address _permit2,uint32 localDomain_,address _messenger,address _counterpart) Ownable(msg.sender) BasicSwap7683(_permit2) {
         localDomain = localDomain_;
+        counterpart = _counterpart;
+        messenger = IT1Messenger(_messenger);
     }
 
     // ============ External Functions ============
 
+   
     /**
      * @notice Process callback from the bridge gateway
      * @dev Creates an auction for the received tokens
@@ -113,14 +141,16 @@ contract DutchAuction is IT1GatewayCallback,BasicSwap7683, Ownable, ReentrancyGu
      */
     function onT1GatewayCallback(bytes memory data) external override {
         (
-            address token,
+            address inputToken,
             uint256 amount,
+            address outputToken,
+            uint256 maxSpentAmount,
             address user,
             bytes32 orderId
         ) = decodeCallbackData(data);
 
         // Create a new auction
-        _createAuction(token, amount, token, amount, user, orderId);
+        _createAuction(inputToken, amount,outputToken,maxSpentAmount,user,orderId);
     }
 
     /**
@@ -201,7 +231,7 @@ contract DutchAuction is IT1GatewayCallback,BasicSwap7683, Ownable, ReentrancyGu
         bid.settled = true;
 
         emit Filled(_orderId, _originData, _fillerData);
-    }    
+    }
 
     /**
      * @notice Create an auction manually
@@ -309,7 +339,10 @@ contract DutchAuction is IT1GatewayCallback,BasicSwap7683, Ownable, ReentrancyGu
         return _getCurrentPrice(auctionId);
     }
 
-    /**
+   /**
+ * @notice Parse callback data from bridge with additional parameters
+ */
+/**
      * @notice Parse callback data from bridge
      */
     function decodeCallbackData(
@@ -317,7 +350,8 @@ contract DutchAuction is IT1GatewayCallback,BasicSwap7683, Ownable, ReentrancyGu
     )
         public
         pure
-        returns (address token, uint256 amount, address user, bytes32 orderId)
+        returns (address inputToken, uint256 amount, address outputToken,
+            uint256 maxSpentAmount, address user, bytes32 orderId)
     {
         // Extract function selector
         bytes4 selector;
@@ -332,28 +366,40 @@ contract DutchAuction is IT1GatewayCallback,BasicSwap7683, Ownable, ReentrancyGu
 
             // Token address is at position 4 (after selector)
             let tokenData := mload(add(dataPtr, 4))
-            token := and(
+            inputToken := and(
                 tokenData,
                 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000
             )
-            token := shr(96, token)
+            inputToken := shr(96, inputToken)
 
             // Amount is at position 24 (after selector + token address)
             amount := mload(add(dataPtr, 24))
 
-            // User address is at position 56
-            let userData := mload(add(dataPtr, 56))
+            // Token address is at position 56
+            let tokenData2 := mload(add(dataPtr, 56))
+            outputToken := and(
+                tokenData2,
+                0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000
+            )
+            outputToken := shr(96, outputToken)
+
+            // Max spent amount is at position 76
+            maxSpentAmount := mload(add(dataPtr, 76))
+
+
+            // User address is at position 108
+            let userData := mload(add(dataPtr, 108))
             user := and(
                 userData,
                 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000
             )
             user := shr(96, user)
 
-            // Order ID is at position 76
-            orderId := mload(add(dataPtr, 76))
+            // Order ID is at position 128
+            orderId := mload(add(dataPtr, 128))
         }
 
-        return (token, amount, user, orderId);
+        return (inputToken, amount,outputToken,maxSpentAmount, user, orderId);
     }
 
     /**
@@ -540,6 +586,59 @@ contract DutchAuction is IT1GatewayCallback,BasicSwap7683, Ownable, ReentrancyGu
         return auctionId;
     }
 
+    /// @notice Handles an incoming message
+    /// @param _origin The origin domain
+    /// @param _sender The sender address
+    /// @param _message The message
+    function handle(uint32 _origin, bytes32 _sender, bytes calldata _message) external payable onlyMessenger {
+        _handle(_origin, _sender, _message);
+    }
+
+    /// @notice Handles incoming messages
+    /// @dev Decodes the message and processes settlement or refund operations accordingly
+    /// @dev _originDomain The domain from which the message originates (unused in this implementation)
+    /// @dev _sender The address of the sender on the origin domain (unused in this implementation)
+    /// @param _message The encoded message received via t1
+     function _handle(uint32, bytes32, bytes calldata _message) internal {
+        (bool _settle, bytes32[] memory _orderIds, bytes[] memory _ordersFillerData) =
+            Hyperlane7683Message.decode(_message);
+
+        for (uint256 i = 0; i < _orderIds.length; i++) {
+            if (_settle) {
+                _handleSettleOrder(_orderIds[i], abi.decode(_ordersFillerData[i], (bytes32)));
+            } else {
+                _handleRefundOrder(_orderIds[i]);
+            }
+        }
+    }
+
+
+    /**
+     * @dev Fills an order on the current domain.
+     * @param _orderId The ID of the order to fill.
+     * @param _originData The origin data of the order.
+     * Additional data related to the order (unused).
+     */
+    function _fillOrder(bytes32 _orderId, bytes calldata _originData, bytes calldata) internal override(BasicSwap7683, Base7683) {
+        OrderData memory orderData = OrderEncoder.decode(_originData);
+        uint256 auctionId = orderIdToAuctionId[_orderId];
+        require(_auctionExists(auctionId), "Auction does not exist");
+        if (_orderId != OrderEncoder.id(orderData)) revert InvalidOrderId();
+        if (block.timestamp > orderData.fillDeadline) revert OrderFillExpired();
+        if (orderData.destinationDomain != _localDomain()) revert InvalidOrderDomain();
+
+        address outputToken = TypeCasts.bytes32ToAddress(orderData.outputToken);
+        address recipient = TypeCasts.bytes32ToAddress(orderData.recipient);
+
+        BidInfo storage bid = auctionBids[auctionId];
+        if (outputToken == address(0)) {
+            if (orderData.amountOut != msg.value) revert InvalidNativeAmount();
+            Address.sendValue(payable(recipient), bid.winningBid);
+        } else {
+            IERC20(outputToken).safeTransferFrom(msg.sender, recipient, bid.winningBid);
+        }
+    }
+
 
     /// @notice Dispatches a settlement message to the specified domain.
     /// @dev Encodes the settle message using Hyperlane7683Message and dispatches it via the GasRouter.
@@ -554,8 +653,14 @@ contract DutchAuction is IT1GatewayCallback,BasicSwap7683, Ownable, ReentrancyGu
         internal
         override
     {
-      
+        if (msg.value != 0) revert EthNotAllowed();
+        bytes memory innerMessage = Hyperlane7683Message.encodeSettle(_orderIds, _ordersFillerData);
+        bytes memory outerMessage = abi.encodeWithSelector(
+            DutchAuction.handle.selector, _originDomain, TypeCasts.addressToBytes32(address(this)), innerMessage
+        );
+        messenger.sendMessage(counterpart, 0, outerMessage, DEFAULT_GAS_LIMIT, uint64(_originDomain));
     }
+
 
     /// @notice Dispatches a refund message to the specified domain.
     /// @dev Encodes the refund message using Hyperlane7683Message and dispatches it via the GasRouter.

@@ -13,7 +13,7 @@ contract SettleOrder is Script {
         // Prepare order IDs and filler data for batch settlement
         bytes32[] memory orderIds = new bytes32[](1);
         // NOTE - orderId logged from the first step goes here (remove 0x first)
-        orderIds[0] = hex"";
+        orderIds[0] = hex"4e5a824436f8dc396a89d81dda5f3408fc1fa0edbb322e3f9b9b7328fd22fcb0";
         
         dutchAuction.settle{ value: 0 }(orderIds);
 
