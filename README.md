@@ -48,4 +48,7 @@ This enhancement reduces fees for users bridging funds, as the relayer incurs a 
 
 Source - https://defillama.com/, https://t1protocol.substack.com/p/how-real-time-proving-rtp-enhances
 
-### Architecture
+### Architecture - 
+
+![Auction](https://github.com/user-attachments/assets/501203a4-d483-4dbe-939f-c633f2939b10)
+
