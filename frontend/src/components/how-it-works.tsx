@@ -14,8 +14,7 @@ export function HowItWorks() {
     deposit: [
       {
         title: "User Deposits Tokens",
-        description:
-          "Alice deposits tokens to the ModifiedEscrow contract on L1.",
+        description: "Alice deposits tokens to the Escrow contract on L1.",
         icon: "💰",
       },
       {
@@ -27,7 +26,7 @@ export function HowItWorks() {
     auction: [
       {
         title: "Dutch Auction Starts",
-        description: "A Dutch auction starts on t1 with a high initial price.",
+        description: "A Dutch auction starts on t1 with an initial price.",
         icon: "🏛️",
       },
       {
