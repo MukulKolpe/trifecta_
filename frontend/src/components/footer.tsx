@@ -1,6 +1,6 @@
 // @ts-nocheck comment
 import Link from "next/link";
-import { Github } from "lucide-react";
+import { Github, Link2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Footer() {
@@ -22,12 +22,28 @@ export function Footer() {
             className="rounded-full bg-blue-500/10 hover:bg-blue-500/20 h-12 w-12"
           >
             <Link
-              href="https://github.com"
+              href="https://github.com/SarveshLimaye/trifecta"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="GitHub"
             >
               <Github className="h-6 w-6 fill-current text-blue-400" />
+            </Link>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="rounded-full bg-blue-500/10 hover:bg-blue-500/20 h-12 w-12"
+          >
+            <Link
+              href="https://ethglobal.com/showcase/dutchcross-0cfhz"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Website"
+            >
+              <Link2Icon className="h-6 w-6 fill-current text-blue-400" />
             </Link>
           </Button>
         </div>
