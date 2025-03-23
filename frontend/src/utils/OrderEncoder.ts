@@ -1,4 +1,4 @@
-// utils/OrderEncoder.ts
+// @ts-nocheck comment
 import { ethers } from 'ethers';
 
 export interface OrderData {

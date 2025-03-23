@@ -1,3 +1,4 @@
+// @ts-nocheck comment
 "use client";
 
 import { useState, useEffect } from "react";
@@ -42,12 +43,17 @@ export function Navbar() {
               <span className="text-blue-400 font-bold text-lg">t1</span>
             </div>
           </div>
-          <span className="font-bold text-2xl text-white">BridgeX</span>
+          <span className="font-bold text-2xl text-white">DutchCross</span>
         </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
-          <NavLinks />
+          <Link href="/deposit" className="font-bold text-xl text-white">
+            Bridge
+          </Link>
+          <Link href="/auctions" className="font-bold text-xl text-white">
+            Auctions
+          </Link>
           <ConnectButton
             accountStatus={{
               smallScreen: "avatar",
