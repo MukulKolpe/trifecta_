@@ -38,6 +38,9 @@ How It Works
 
 - The escrow contract on L1 releases Alice’s deposited funds to the solver.
 
+
+PPT Link - https://app.presentations.ai/view/tf3Ebi
+
 ### Capital Efficiency Analysis
 
 According to DeFiLlama (on February 12, 2025), Across facilitated ~$19.1mn bridging volume and 9507 bridge transactions in the last 24 hours on Ethereum, Optimism, and Arbitrum.
