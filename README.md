@@ -2,6 +2,12 @@
 
 This project integrates a Dutch auction mechanism with the ERC-7683 intent-based bridging framework to optimize solver selection for cross-chain transactions. The goal is to improve execution quality, reduce bridging costs, and increase solver capital efficiency by leveraging Real-Time Proving (RTP) on t1.
 
+### Deployed Address - 
+
+Dutch Auction Contract (t1 devnet) - https://explorer.v006.t1protocol.com/address/0xbF59f5a5931B9013A6d3724d0D3A2a0abafe3Afc
+Esrow Contract - https://sepolia.etherscan.io/address/0x643af2c715f74f8d7003f5e7ba84e9f7a71de55f
+
+
 ### Problem Statement
 
 While rollups have significantly scaled Ethereum’s throughput, they have also introduced liquidity fragmentation and broken composability. Current bridging mechanisms require solvers to front significant capital, leading to higher bridging costs for users. Additionally, order-matching systems rely on centralized relayers or leader-based mechanisms, which limit competition and execution efficiency.
