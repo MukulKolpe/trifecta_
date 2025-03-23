@@ -4,8 +4,8 @@ This project integrates a Dutch auction mechanism with the ERC-7683 intent-based
 
 ### Deployed Address - 
 
-Dutch Auction Contract (t1 devnet) - https://explorer.v006.t1protocol.com/address/0xbF59f5a5931B9013A6d3724d0D3A2a0abafe3Afc
-Esrow Contract - https://sepolia.etherscan.io/address/0x643af2c715f74f8d7003f5e7ba84e9f7a71de55f
+- Dutch Auction Contract (t1 devnet) - https://explorer.v006.t1protocol.com/address/0xbF59f5a5931B9013A6d3724d0D3A2a0abafe3Afc  
+- Esrow Contract - https://sepolia.etherscan.io/address/0x643af2c715f74f8d7003f5e7ba84e9f7a71de55f
 
 
 ### Problem Statement
